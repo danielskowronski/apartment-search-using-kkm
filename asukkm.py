@@ -1,5 +1,6 @@
 #!/usr/bin/python3
-import urllib.request,json,math
+import urllib.request,json,math,base64,re
+from pprint import pprint
 
 class Haversine:
 	#SOURCE: https://nathanrooy.github.io/posts/2016-09-07/haversine-with-python/
@@ -24,7 +25,34 @@ class Haversine:
         self.miles=self.meters*0.000621371      # output distance in miles
         self.feet=self.miles*5280               # output distance in feet
 
-#class LinesDB:
+class LinesDB:
+	apiServer="http://rozklady.mpk.krakow.pl/?lang=PL&"
+	stopsByLine=dict()
+	linesByStop=dict()
+
+	def __APIrequest(self,url):
+		req = urllib.request.Request(
+    		self.apiServer+url, 
+			data=None, 
+			headers={
+				'Cookie': 'ROZKLADY_JEZYK=PL; ROZKLADY_WIDTH=2000; ROZKLADY_AB=0; ROZKLADY_WIZYTA=0; ROZKLADY_OSTATNIA=0'
+			}
+		)
+		f = urllib.request.urlopen(req)
+		return f.read().decode('utf-8')
+
+	def getLinesAtStop(self,stop):
+		stopID=base64.encodebytes(stop.name.encode()).decode().replace("=","")
+		data=self.__APIrequest("akcja=przystanek&przystanek="+stopID)
+		m=re.findall("linia=(\d+)__",data)
+		lines=list(set(m))
+		return lines
+
+	def __init__(self,stopsArr):
+		for stop in stopsArr:
+			self.linesByStop[stop.shortName]=self.getLinesAtStop(stop)
+
+
 class StopsDB:
 	apiServers=["http://www.ttss.krakow.pl","http://91.223.13.70"]
 	apiPath="/internetservice/geoserviceDispatcher/services/stopinfo/stops?left=-648000000&bottom=-324000000&right=648000000&top=324000000"
@@ -69,11 +97,13 @@ class Stop:
 
 
 _StopsDB=StopsDB()
-banacha=_StopsDB.find("Banacha")[0]
-print(banacha)
-gnw=_StopsDB.find("Górka Narodowa Wschód")[0]
-print(gnw)
+rb=_StopsDB.find("Rondo Barei")[0]
 cm=_StopsDB.find("Czerwone Maki")[0]
+
+_LinesDB=LinesDB([rb,cm])
+
 print(cm)
-print(banacha.isWithinRange(gnw,1000))
-print(banacha.isWithinRange(cm,1000))
+pprint(_LinesDB.linesByStop[cm.shortName])
+
+print(rb)
+pprint(_LinesDB.linesByStop[rb.shortName])
