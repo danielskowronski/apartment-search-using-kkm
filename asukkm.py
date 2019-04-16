@@ -1,5 +1,5 @@
 #!/usr/bin/python3
-import urllib.request,json,math,base64,re
+import urllib.request,json,math,base64,re,argparse
 from pprint import pprint
 
 class Haversine:
@@ -41,18 +41,38 @@ class LinesDB:
 		f = urllib.request.urlopen(req)
 		return f.read().decode('utf-8')
 
-	def getLinesAtStop(self,stop):
+	def fixWeirdBase64(self,txt):
+		return txt+ "=" * ((4 - len(txt) % 4) % 4)
+
+	def fetchStopsAtLine(self,line):
+		data=self.__APIrequest("linia="+line)
+		m=re.findall("przystanek=(.*)'",data)
+		stopIDs=list(set(m))
+		stops=list()
+		for stopID in stopIDs:
+			fixed=self.fixWeirdBase64(stopID)
+			decoded=base64.b64decode(fixed).decode('utf-8',errors='ignore')
+			stop=_StopsDB.find(decoded)
+			stops.append(stop)
+		return stops
+	def getStopsAtLine(self,line):
+		if not line in self.stopsByLine:
+			self.stopsByLine[line]=self.fetchStopsAtLine(line)
+		return self.stopsByLine[line]
+
+	def fetchLinesAtStop(self,stop):
 		stopID=base64.encodebytes(stop.name.encode()).decode().replace("=","")
 		data=self.__APIrequest("akcja=przystanek&przystanek="+stopID)
 		m=re.findall("linia=(\d+)__",data)
 		lines=list(set(m))
 		return lines
+	def getLinesAtStop(self,stop):
+		if not stop.shortName in self.linesByStop:
+			self.linesByStop[stop.shortName]=self.fetchLinesAtStop(stop)
+		return self.linesByStop[stop.shortName]
 
-	def __init__(self,stopsArr):
-		for stop in stopsArr:
-			self.linesByStop[stop.shortName]=self.getLinesAtStop(stop)
-
-
+	#def __init__(self):
+	#	
 class StopsDB:
 	apiServers=["http://www.ttss.krakow.pl","http://91.223.13.70"]
 	apiPath="/internetservice/geoserviceDispatcher/services/stopinfo/stops?left=-648000000&bottom=-324000000&right=648000000&top=324000000"
@@ -67,7 +87,7 @@ class StopsDB:
 	def find(self,stopToFind):
 		matchingStops=[]
 		for stop in self.allStops:
-			if stopToFind in stop['name']:
+			if stopToFind in stop['name'] or stop['name'] in stopToFind:
 				stopObj=Stop(stop['shortName'],stop['id'],stop['name'],stop['latitude']/3600000.0,stop['longitude']/3600000.0)
 				matchingStops.append(stopObj)
 		return matchingStops
@@ -95,15 +115,28 @@ class Stop:
 		dist=Haversine([self.longitude,self.latitude],[otherStop.longitude,otherStop.latitude])
 		return dist.km<=distance/1000
 
+parser = argparse.ArgumentParser(description="apartment-search-using-kkm")
+parser.add_argument("stop",type=str,nargs=2,help="tram/bus stop base name")
+args = parser.parse_args()
 
 _StopsDB=StopsDB()
-rb=_StopsDB.find("Rondo Barei")[0]
-cm=_StopsDB.find("Czerwone Maki")[0]
+stop1=_StopsDB.find(args.stop[0])[0]
+stop2=_StopsDB.find(args.stop[1])[0]
 
-_LinesDB=LinesDB([rb,cm])
+_LinesDB=LinesDB()
+print(stop1)
+print(_LinesDB.getLinesAtStop(stop1))
+print(stop2)
+print(_LinesDB.getLinesAtStop(stop2))
+linesToConsider=_LinesDB.getLinesAtStop(stop1)+_LinesDB.getLinesAtStop(stop2)
 
-print(cm)
-pprint(_LinesDB.linesByStop[cm.shortName])
-
-print(rb)
-pprint(_LinesDB.linesByStop[rb.shortName])
+for line in linesToConsider:
+	if line[0]=="9" or line[0]=="6":
+		print("Skipping night line: "+line)
+		continue
+	if line[0]=="7":
+		print("Skipping temporary line: "+line)
+		continue 
+	print("Checking line: "+line)
+	stops=_LinesDB.getStopsAtLine(line)
+	print(stops)
