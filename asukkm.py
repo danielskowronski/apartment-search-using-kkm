@@ -171,6 +171,7 @@ for stopA in stopsForConnection1:
 uniqueMatchingStopsMatrix=list(set(matchingShortNamesStopsMatrix))
 
 f=open("points.js","w",encoding='utf8')
+f.write("var title='ASUKKM: "+args.stop[0]+", "+args.stop[1]+", "+str(args.distance[0])+"m';\n")
 f.write("var points=[];\n");
 
 def matchingLines(stopX,linesToConsiderX):
@@ -182,6 +183,13 @@ def matchingLines(stopX,linesToConsiderX):
 				matchingLinesAtX.append(lineAtX)
 	linesX=",".join(matchingLinesAtX)
 	return linesX
+def lineToWrite(stopA,matchingLinesA,stopB,matchingLinesB):
+	return \
+		"points.push(["+\
+		str(stopA.longitude)+","+str(stopA.latitude)+","+\
+		"'"+stopA.name+"','"+stopB.name+"',"+\
+		"'"+matchingLinesA+"','"+matchingLinesB+"',"+\
+		"]);\n"
 
 i=0
 for pair in uniqueMatchingStopsMatrix:
@@ -195,12 +203,11 @@ for pair in uniqueMatchingStopsMatrix:
 		# this skips some broken matches like "Wieczysta"<->"TAURON Arena Kraków Wieczysta"
 		continue
 
-	print("Matching stops #"+str(i).zfill(4)+": "+stopA.name+", "+stopB.name)
-	f.write("points.push(["+\
-		str(stopA.longitude)+","+str(stopA.latitude)+","+\
-		"'"+stopA.name+"','"+stopB.name+"',"+\
-		"'"+matchingLinesA+"','"+matchingLinesB+"',"+\
-		"]);\n")
+	print("Matching stops #"+str(i).zfill(4)+": "+\
+		stopA.name+": "+matchingLinesA+"; "+stopB.name+": "+matchingLinesB)
+
+	f.write(lineToWrite(stopA,matchingLinesA,stopB,matchingLinesB))
+	f.write(lineToWrite(stopB,matchingLinesB,stopA,matchingLinesA))
 print(" ASUKKM: Found "+str(i)+" matching stops")
 
 f.close()
