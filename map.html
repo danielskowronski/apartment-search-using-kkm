@@ -1,4 +1,5 @@
 <html><body>
+  <meta charset="utf-8" />
 	<div id="mapdiv"></div>
 	<script src="points.js"></script>
 	<script src="http://www.openlayers.org/api/OpenLayers.js"></script>
@@ -16,7 +17,17 @@
 			new OpenLayers.Projection("EPSG:4326"), // transform from WGS 1984
 			map.getProjectionObject() // to Spherical Mercator Projection
     );
-    markers.addMarker(new OpenLayers.Marker(lonLat));
+    var marker = new OpenLayers.Marker(lonLat);
+    markers.addMarker(marker);
+    marker.events.register("click", marker, function(e){
+      popup = new OpenLayers.Popup.FramedCloud("chicken",
+        marker.lonlat,
+        null,
+        p[2]+"<br /><i>"+p[3]+"</i>",
+        null,true 
+      );
+      map.addPopup(popup);
+    });
 	})
 
   var lonLat = new OpenLayers.LonLat( 19.94,50.06 ).transform(

@@ -71,7 +71,6 @@ class LinesDB:
 		if not stop.shortName in self.linesByStop:
 			self.linesByStop[stop.shortName]=self.fetchLinesAtStop(stop)
 		return self.linesByStop[stop.shortName]
-
 class StopsDB:
 	apiServers=["http://www.ttss.krakow.pl","http://91.223.13.70"]
 	apiPath="/internetservice/geoserviceDispatcher/services/stopinfo/stops?left=-648000000&bottom=-324000000&right=648000000&top=324000000"
@@ -167,16 +166,11 @@ matchingShortNamesStopsMatrix=[]
 for stopA in stopsForConnection1:
 	debugPrint(" ASUKKM: Checking matrix for stop A: "+str(stopA))
 	for stopB in stopsForConnection2:
-		#breakpoint()
-		#if stopA.name=="Rondo Mogilskie":
-		#	debugPrint("A= "+str(stopA))
-		#if stopB.name=="Rondo Mogilskie":
-		#	debugPrint("B= "+str(stopB))
 		if stopA.isWithinRange(stopB,distance):
 			matchingShortNamesStopsMatrix.append((stopA.shortName,stopB.shortName))
 uniqueMatchingStopsMatrix=list(set(matchingShortNamesStopsMatrix))
 
-f=open("points.js","w")
+f=open("points.js","w",encoding='utf8')
 f.write("var points=[];\n");
 
 i=0
@@ -185,8 +179,7 @@ for pair in uniqueMatchingStopsMatrix:
 	stopA=_StopsDB.constructByShortname(pair[0])
 	stopB=_StopsDB.constructByShortname(pair[1])
 	print("Matching stops #"+str(i).zfill(4)+": "+stopA.name+", "+stopB.name)
-	f.write("points.push(["+str(stopA.longitude)+","+str(stopA.latitude)+",'"+stopA.name+"']);\n")
-	f.write("points.push(["+str(stopB.longitude)+","+str(stopB.latitude)+",'"+stopB.name+"']);\n")
+	f.write("points.push(["+str(stopA.longitude)+","+str(stopA.latitude)+",'"+stopA.name+"','"+stopB.name+"']);\n")
 print(" ASUKKM: Found "+str(i)+" matching stops")
 
 f.close()
