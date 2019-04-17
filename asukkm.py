@@ -72,8 +72,6 @@ class LinesDB:
 			self.linesByStop[stop.shortName]=self.fetchLinesAtStop(stop)
 		return self.linesByStop[stop.shortName]
 
-	#def __init__(self):
-	#	
 class StopsDB:
 	apiServers=["http://www.ttss.krakow.pl","http://91.223.13.70"]
 	apiPath="/internetservice/geoserviceDispatcher/services/stopinfo/stops?left=-648000000&bottom=-324000000&right=648000000&top=324000000"
@@ -150,20 +148,30 @@ def checkOrSkip(line):
 	debugPrint("Will consider line: "+line)
 	return True
 
+def stopsForConnection(linesToConsider):
+	stopsForConnection=[]
+	for line in linesToConsider:
+		if not checkOrSkip(line):
+			continue
+		stopsAtLine=_LinesDB.getStopsAtLine(line)
+		for stop in stopsAtLine:
+			stopsForConnection.append(stop)
+	return stopsForConnection
+
 print("LinesDB: Fetching lines for "+str(stop1))
-for line in linesToConsider1:
-	if not checkOrSkip(line):
-		continue
-	stopsForConnection1=_LinesDB.getStopsAtLine(line)
+stopsForConnection1=stopsForConnection(linesToConsider1)
 print("LinesDB: Fetching lines for "+str(stop2))
-for line in linesToConsider2:
-	if not checkOrSkip(line):
-		continue
-	stopsForConnection2=_LinesDB.getStopsAtLine(line)
+stopsForConnection2=stopsForConnection(linesToConsider2)
 
 matchingShortNamesStopsMatrix=[]
 for stopA in stopsForConnection1:
+	debugPrint(" ASUKKM: Checking matrix for stop A: "+str(stopA))
 	for stopB in stopsForConnection2:
+		#breakpoint()
+		#if stopA.name=="Rondo Mogilskie":
+		#	debugPrint("A= "+str(stopA))
+		#if stopB.name=="Rondo Mogilskie":
+		#	debugPrint("B= "+str(stopB))
 		if stopA.isWithinRange(stopB,distance):
 			matchingShortNamesStopsMatrix.append((stopA.shortName,stopB.shortName))
 uniqueMatchingStopsMatrix=list(set(matchingShortNamesStopsMatrix))
