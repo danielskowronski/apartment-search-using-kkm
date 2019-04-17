@@ -1,0 +1,28 @@
+<html><body>
+	<div id="mapdiv"></div>
+	<script src="points.js"></script>
+	<script src="http://www.openlayers.org/api/OpenLayers.js"></script>
+	<script>
+	map = new OpenLayers.Map("mapdiv");
+	map.addLayer(new OpenLayers.Layer.OSM());
+
+	var zoom=13;
+
+	var markers = new OpenLayers.Layer.Markers( "Markers" );
+	map.addLayer(markers);
+
+	points.forEach(function(p){
+		var lonLat = new OpenLayers.LonLat( p[0] ,p[1] ).transform(
+			new OpenLayers.Projection("EPSG:4326"), // transform from WGS 1984
+			map.getProjectionObject() // to Spherical Mercator Projection
+    );
+    markers.addMarker(new OpenLayers.Marker(lonLat));
+	})
+
+  var lonLat = new OpenLayers.LonLat( 19.94,50.06 ).transform(
+      new OpenLayers.Projection("EPSG:4326"), // transform from WGS 1984
+      map.getProjectionObject() // to Spherical Mercator Projection
+    );
+	map.setCenter (lonLat, zoom);
+	</script>
+</body></html>

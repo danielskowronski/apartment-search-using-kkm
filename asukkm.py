@@ -118,7 +118,7 @@ class Stop:
 		return dist.km<=distance/1000
 
 def debugPrint(txt):
-	if verboseLevel>0:
+	if verboseLevel!=None:
 		print("~~debug: "+txt)
 
 parser = argparse.ArgumentParser(description="apartment-search-using-kkm")
@@ -176,10 +176,17 @@ for stopA in stopsForConnection1:
 			matchingShortNamesStopsMatrix.append((stopA.shortName,stopB.shortName))
 uniqueMatchingStopsMatrix=list(set(matchingShortNamesStopsMatrix))
 
+f=open("points.js","w")
+f.write("var points=[];\n");
+
 i=0
 for pair in uniqueMatchingStopsMatrix:
 	i+=1
 	stopA=_StopsDB.constructByShortname(pair[0])
 	stopB=_StopsDB.constructByShortname(pair[1])
 	print("Matching stops #"+str(i).zfill(4)+": "+stopA.name+", "+stopB.name)
+	f.write("points.push(["+str(stopA.longitude)+","+str(stopA.latitude)+",'"+stopA.name+"']);\n")
+	f.write("points.push(["+str(stopB.longitude)+","+str(stopB.latitude)+",'"+stopB.name+"']);\n")
 print(" ASUKKM: Found "+str(i)+" matching stops")
+
+f.close()
