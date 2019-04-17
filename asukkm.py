@@ -173,13 +173,34 @@ uniqueMatchingStopsMatrix=list(set(matchingShortNamesStopsMatrix))
 f=open("points.js","w",encoding='utf8')
 f.write("var points=[];\n");
 
+def matchingLines(stopX,linesToConsiderX):
+	linesAtX=_LinesDB.getLinesAtStop(stopX)
+	matchingLinesAtX=[]
+	for lineAtX in linesAtX:
+		for lineToX in linesToConsiderX:
+			if lineAtX==lineToX:
+				matchingLinesAtX.append(lineAtX)
+	linesX=",".join(matchingLinesAtX)
+	return linesX
+
 i=0
 for pair in uniqueMatchingStopsMatrix:
 	i+=1
 	stopA=_StopsDB.constructByShortname(pair[0])
 	stopB=_StopsDB.constructByShortname(pair[1])
+	matchingLinesA=matchingLines(stopA,linesToConsider1)
+	matchingLinesB=matchingLines(stopB,linesToConsider2)
+
+	if matchingLinesA=="" or matchingLinesB=="":
+		# this skips some broken matches like "Wieczysta"<->"TAURON Arena Kraków Wieczysta"
+		continue
+
 	print("Matching stops #"+str(i).zfill(4)+": "+stopA.name+", "+stopB.name)
-	f.write("points.push(["+str(stopA.longitude)+","+str(stopA.latitude)+",'"+stopA.name+"','"+stopB.name+"']);\n")
+	f.write("points.push(["+\
+		str(stopA.longitude)+","+str(stopA.latitude)+","+\
+		"'"+stopA.name+"','"+stopB.name+"',"+\
+		"'"+matchingLinesA+"','"+matchingLinesB+"',"+\
+		"]);\n")
 print(" ASUKKM: Found "+str(i)+" matching stops")
 
 f.close()
