@@ -52,8 +52,9 @@ class LinesDB:
 		for stopID in stopIDs:
 			fixed=self.fixWeirdBase64(stopID)
 			decoded=base64.b64decode(fixed).decode('utf-8',errors='ignore')
-			stop=_StopsDB.find(decoded)
-			stops.append(stop)
+			stopInstances=_StopsDB.find(decoded)
+			for stop in stopInstances:
+				stops.append(stop)
 		return stops
 	def getStopsAtLine(self,line):
 		if not line in self.stopsByLine:
@@ -91,13 +92,18 @@ class StopsDB:
 				stopObj=Stop(stop['shortName'],stop['id'],stop['name'],stop['latitude']/3600000.0,stop['longitude']/3600000.0)
 				matchingStops.append(stopObj)
 		return matchingStops
+	def constructByShortname(self,shortname):
+		for stop in self.allStops:
+			if stop['shortName']==shortname:
+				stopObj=Stop(stop['shortName'],stop['id'],stop['name'],stop['latitude']/3600000.0,stop['longitude']/3600000.0)
+				return stopObj
+		return None
 class Stop:
 	ident=""
 	name=""
 	latitude=0.0
 	longitude=0.0
 	shortName=""
-	lines=[]
 
 	def __str__(self):
 		return "Tram/Bus Stop Name='"+self.name+"' ["+self.shortName+"] Coords=("+str(self.longitude)+","+str(self.latitude)+")"
@@ -109,34 +115,63 @@ class Stop:
 		self.latitude=latitude
 		self.longitude=longitude
 
-		#TODO: get lines
-
 	def isWithinRange(self,otherStop,distance):
 		dist=Haversine([self.longitude,self.latitude],[otherStop.longitude,otherStop.latitude])
 		return dist.km<=distance/1000
 
+def debugPrint(txt):
+	if verboseLevel>0:
+		print("~~debug: "+txt)
+
 parser = argparse.ArgumentParser(description="apartment-search-using-kkm")
 parser.add_argument("stop",type=str,nargs=2,help="tram/bus stop base name")
+parser.add_argument("distance",type=int,nargs=1,help="max distance in meters")
+parser.add_argument("--verbose","-v",action="count")
 args = parser.parse_args()
+
+verboseLevel=args.verbose
+distance=args.distance[0]
 
 _StopsDB=StopsDB()
 stop1=_StopsDB.find(args.stop[0])[0]
 stop2=_StopsDB.find(args.stop[1])[0]
 
 _LinesDB=LinesDB()
-print(stop1)
-print(_LinesDB.getLinesAtStop(stop1))
-print(stop2)
-print(_LinesDB.getLinesAtStop(stop2))
-linesToConsider=_LinesDB.getLinesAtStop(stop1)+_LinesDB.getLinesAtStop(stop2)
+linesToConsider1=_LinesDB.getLinesAtStop(stop1)
+linesToConsider2=_LinesDB.getLinesAtStop(stop2)
 
-for line in linesToConsider:
+def checkOrSkip(line):
 	if line[0]=="9" or line[0]=="6":
-		print("Skipping night line: "+line)
-		continue
+		debugPrint("Skipping night line: "+line)
+		return False
 	if line[0]=="7":
-		print("Skipping temporary line: "+line)
-		continue 
-	print("Checking line: "+line)
-	stops=_LinesDB.getStopsAtLine(line)
-	print(stops)
+		debugPrint("Skipping temporary line: "+line)
+		return False
+	debugPrint("Will consider line: "+line)
+	return True
+
+print("LinesDB: Fetching lines for "+str(stop1))
+for line in linesToConsider1:
+	if not checkOrSkip(line):
+		continue
+	stopsForConnection1=_LinesDB.getStopsAtLine(line)
+print("LinesDB: Fetching lines for "+str(stop2))
+for line in linesToConsider2:
+	if not checkOrSkip(line):
+		continue
+	stopsForConnection2=_LinesDB.getStopsAtLine(line)
+
+matchingShortNamesStopsMatrix=[]
+for stopA in stopsForConnection1:
+	for stopB in stopsForConnection2:
+		if stopA.isWithinRange(stopB,distance):
+			matchingShortNamesStopsMatrix.append((stopA.shortName,stopB.shortName))
+uniqueMatchingStopsMatrix=list(set(matchingShortNamesStopsMatrix))
+
+i=0
+for pair in uniqueMatchingStopsMatrix:
+	i+=1
+	stopA=_StopsDB.constructByShortname(pair[0])
+	stopB=_StopsDB.constructByShortname(pair[1])
+	print("Matching stops #"+str(i).zfill(4)+": "+stopA.name+", "+stopB.name)
+print(" ASUKKM: Found "+str(i)+" matching stops")
